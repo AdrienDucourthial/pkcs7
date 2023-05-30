@@ -6,7 +6,6 @@ import (
 	"crypto"
 	"crypto/dsa"
 	"crypto/ecdsa"
-	"crypto/rsa"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
@@ -118,7 +117,20 @@ func getDigestOIDForSignatureAlgorithm(digestAlg x509.SignatureAlgorithm) (asn1.
 // the OID of a digest algorithm to return the appropriate signerInfo.DigestEncryptionAlgorithm
 func getOIDForEncryptionAlgorithm(pkey crypto.PrivateKey, OIDDigestAlg asn1.ObjectIdentifier) (asn1.ObjectIdentifier, error) {
 	switch pkey.(type) {
-	case *rsa.PrivateKey:
+	case *ecdsa.PrivateKey:
+		switch {
+		case OIDDigestAlg.Equal(OIDDigestAlgorithmSHA1):
+			return OIDDigestAlgorithmECDSASHA1, nil
+		case OIDDigestAlg.Equal(OIDDigestAlgorithmSHA256):
+			return OIDDigestAlgorithmECDSASHA256, nil
+		case OIDDigestAlg.Equal(OIDDigestAlgorithmSHA384):
+			return OIDDigestAlgorithmECDSASHA384, nil
+		case OIDDigestAlg.Equal(OIDDigestAlgorithmSHA512):
+			return OIDDigestAlgorithmECDSASHA512, nil
+		}
+	case *dsa.PrivateKey:
+		return OIDDigestAlgorithmDSA, nil
+	default:
 		switch {
 		default:
 			return OIDEncryptionAlgorithmRSA, nil
@@ -133,19 +145,6 @@ func getOIDForEncryptionAlgorithm(pkey crypto.PrivateKey, OIDDigestAlg asn1.Obje
 		case OIDDigestAlg.Equal(OIDDigestAlgorithmSHA512):
 			return OIDEncryptionAlgorithmRSASHA512, nil
 		}
-	case *ecdsa.PrivateKey:
-		switch {
-		case OIDDigestAlg.Equal(OIDDigestAlgorithmSHA1):
-			return OIDDigestAlgorithmECDSASHA1, nil
-		case OIDDigestAlg.Equal(OIDDigestAlgorithmSHA256):
-			return OIDDigestAlgorithmECDSASHA256, nil
-		case OIDDigestAlg.Equal(OIDDigestAlgorithmSHA384):
-			return OIDDigestAlgorithmECDSASHA384, nil
-		case OIDDigestAlg.Equal(OIDDigestAlgorithmSHA512):
-			return OIDDigestAlgorithmECDSASHA512, nil
-		}
-	case *dsa.PrivateKey:
-		return OIDDigestAlgorithmDSA, nil
 	}
 	return nil, fmt.Errorf("pkcs7: cannot convert encryption algorithm to oid, unknown private key type %T", pkey)
 
